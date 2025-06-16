@@ -26,10 +26,10 @@ export class Player {
      * Creates a new Player instance.
      * @param {string} id - The unique ID for the player.
      * @param {number} initialX - The player's starting X coordinate.
-     * @param {number} initialY - The player's starting Y coordinate (defaulting to 0 if not provided).
-     * @param {number} initialZ - The player's starting Z coordinate (defaulting to 0 if not provided).
+     * @param {number} initialY - The player's starting Y coordinate (defaulting to 1 if not provided).
+     * @param {number} initialZ - The player's starting Z coordinate (defaulting to 1 if not provided).
      */
-    constructor(id: string, initialX: number = 0, initialY: number = 0, initialZ: number = 0) {
+    constructor(id: string, initialX: number = 1, initialY: number = 1, initialZ: number = 1) {
         this._id = id;
         this._x = initialX;
         this._y = initialY; // Y is fixed and won't change

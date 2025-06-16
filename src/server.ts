@@ -6,7 +6,7 @@ import { Game } from './game';
 import { PlayerState } from './player';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
-const GAME_TICK_RATE = 1000 / 2; // 2 updates per second
+const GAME_TICK_RATE = 1000 / 60; // 4 updates per second
 
 interface CustomWebSocket extends WebSocket {
     id: string; // Add a unique ID to each WebSocket connection
@@ -42,7 +42,7 @@ wss.on('connection', ws => {
     console.log(`Client connected: ${playerId}`);
 
     // Add player to the game state
-    const initialPlayerState = game.addPlayer(playerId, Math.random() * 100); // Random initial X
+    const initialPlayerState = game.addPlayer(playerId, Math.random() * 50); // Random initial X
 
     // Notify the new client of their ID and the initial game state
     ws.send(encodeServerMessage({ type: 'connected', playerId } as PlayerConnectedMessage));

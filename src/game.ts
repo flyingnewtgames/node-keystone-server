@@ -19,10 +19,10 @@ export class Game {
     }
 
     /**
-     * Generates a random coordinate value between -100 and 100
+     * Generates a random coordinate value between -50 and 50
      */
     private generateRandomCoordinate(): number {
-        return Math.floor(Math.random() * 201) - 100; // Range: -100 to 100
+        return Math.floor(Math.random() * 101) - 50; // Range: -50 to 50
     }
 
     /**
@@ -60,10 +60,10 @@ export class Game {
         const x = initialX ?? this.generateRandomCoordinate();
         const z = initialZ ?? this.generateRandomCoordinate();
         
-        const player = new Player(playerId, x, 0, z); // Y remains 0 (ground level)
+        const player = new Player(playerId, x, 1, z); // Y remains 1 (ground level)
         this.players.set(playerId, player);
         this.lastKnownPositions.set(playerId, { x, z });
-        console.log(`Player ${playerId} added at (${x}, 0, ${z}).`);
+        console.log(`Player ${playerId} added at (${x}, 1, ${z}).`);
         return player.getState();
     }
 
@@ -83,7 +83,7 @@ export class Game {
     }
 
     /**
-     * Updates a player's X and Z position. Y position remains fixed at 0.
+     * Updates a player's X and Z position. Y position remains fixed at 1.
      * @param {string} playerId - The ID of the player to update.
      * @param {number} newX - The new X coordinate for the player.
      * @param {number} newZ - The new Z coordinate for the player.
@@ -94,8 +94,8 @@ export class Game {
         if (player) {
             player.x = newX;
             player.z = newZ;
-            // Y remains fixed at 0
-            // console.log(`Player ${playerId} moved to (${newX}, 0, ${newZ}).`);
+            // Y remains fixed at 1
+            // console.log(`Player ${playerId} moved to (${newX}, 1, ${newZ}).`);
             return player.getState();
         }
         console.warn(`Attempted to move non-existent player ${playerId}.`);
@@ -150,12 +150,14 @@ export class Game {
         // Get players with position changes
         const updatedPlayers = this.getUpdatedPlayerStates();
         
-        if (updatedPlayers.length > 0) {
+        // Only broadcast/log if there are actually players who moved
+        if (updatedPlayers.length > 1) {
             // Here you would typically broadcast the updates to connected clients
             // For now, we'll just log the updates
-            console.log(`Broadcasting updates for ${updatedPlayers.length} players:`, 
-                updatedPlayers.map(p => `${p.id}: (${p.x}, ${p.y}, ${p.z})`));
+            /* console.log(`Broadcasting updates for ${updatedPlayers.length} players:`, 
+                updatedPlayers.map(p => `${p.id}: (${p.x}, ${p.y}, ${p.z})`)); */
         }
+        // No output when no players have moved
         
         // Implement additional game logic here, e.g.,
         // - Collision detection
