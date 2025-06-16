@@ -33,6 +33,35 @@ function broadcast(message: ServerMessage): void {
     });
 }
 
+/**
+ * Sends a server message to a specific player by their ID.
+ * @param {string} playerId - The ID of the player to send the message to.
+ * @param {ServerMessage} message - The message object to send.
+ * @returns {boolean} - Returns true if message was sent successfully, false if player not found or connection closed.
+ */
+function sendToPlayer(playerId: string, message: ServerMessage): boolean {
+    const client = clients.get(playerId);
+    
+    if (!client) {
+        console.warn(`Attempted to send message to non-existent player: ${playerId}`);
+        return false;
+    }
+    
+    if (client.readyState !== WebSocket.OPEN) {
+        console.warn(`Attempted to send message to player with closed connection: ${playerId}`);
+        return false;
+    }
+    
+    try {
+        const encodedMessage = encodeServerMessage(message);
+        client.send(encodedMessage);
+        return true;
+    } catch (error) {
+        console.error(`Failed to send message to player ${playerId}:`, error);
+        return false;
+    }
+}
+
 wss.on('connection', ws => {
     // Generate a unique ID for the new connection
     const playerId = uuidv4();
@@ -44,12 +73,20 @@ wss.on('connection', ws => {
     // Add player to the game state
     const initialPlayerState = game.addPlayer(playerId, Math.random() * 50, 1, 0); // Random initial X, default Z and rotation
 
-    // Notify the new client of their ID and the initial game state
-    ws.send(encodeServerMessage({ type: 'connected', playerId } as PlayerConnectedMessage));
+    // Send the new client their assigned ID directly
+    ws.send(encodeServerMessage({ type: 'id_assignment', playerId } as any)); // You'll need to add this type to your protocol
+    
+    // Send the new client the initial game state
     ws.send(encodeServerMessage({ type: 'state', players: game.getAllPlayerStates() } as StateUpdateMessage));
 
-    // Broadcast to all other clients that a new player has connected
-    broadcast({ type: 'connected', playerId: playerId } as PlayerConnectedMessage);
+    // Broadcast to all OTHER clients that a new player has connected (excluding the new client)
+    const connectMessage = { type: 'connected', playerId: playerId } as PlayerConnectedMessage;
+    const encodedConnectMessage = encodeServerMessage(connectMessage);
+    clients.forEach((client, clientId) => {
+        if (clientId !== playerId && client.readyState === WebSocket.OPEN) {
+            client.send(encodedConnectMessage);
+        }
+    });
 
     ws.on('message', message => {
         // Ensure message is a Buffer before decoding
