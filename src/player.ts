@@ -10,6 +10,7 @@ export interface PlayerState {
     id: string;
     x: number;
     y: number; // Y is fixed as per requirement (no vertical movement)
+    z: number;
 }
 
 /**
@@ -19,17 +20,20 @@ export class Player {
     private _id: string;
     private _x: number;
     private _y: number; // Fixed Y-coordinate
+    private _z: number;
 
     /**
      * Creates a new Player instance.
      * @param {string} id - The unique ID for the player.
      * @param {number} initialX - The player's starting X coordinate.
      * @param {number} initialY - The player's starting Y coordinate (defaulting to 0 if not provided).
+     * @param {number} initialZ - The player's starting Z coordinate (defaulting to 0 if not provided).
      */
-    constructor(id: string, initialX: number = 0, initialY: number = 0) {
+    constructor(id: string, initialX: number = 0, initialY: number = 0, initialZ: number = 0) {
         this._id = id;
         this._x = initialX;
         this._y = initialY; // Y is fixed and won't change
+        this._z = initialZ;
     }
 
     /**
@@ -66,14 +70,31 @@ export class Player {
     }
 
     /**
+     * Gets the player's current Z coordinate.
+     * @returns {number} The player's Z coordinate.
+     */
+    public get z(): number {
+        return this._z;
+    }
+
+    /**
+     * Sets the player's Z coordinate.
+     * @param {number} newZ - The new Z coordinate.
+     */
+    public set z(newZ: number) {
+        this._z = newZ;
+    }
+
+    /**
      * Returns the player's current state as a PlayerState object.
      * @returns {PlayerState} The current state of the player.
      */
     public getState(): PlayerState {
         return {
-            id: this._id,
-            x: this._x,
-            y: this._y,
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            z: this.z
         };
     }
 }

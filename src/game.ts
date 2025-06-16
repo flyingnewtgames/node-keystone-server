@@ -7,27 +7,63 @@ import { Player, PlayerState } from './player';
  */
 export class Game {
     private players: Map<string, Player>; // Maps player ID to Player instance
-    private fixedY: number = 0; // All players will be on this fixed Y-coordinate
+    private lastKnownPositions: Map<string, { x: number; z: number }>; // Track last sent X and Z positions
+    private updateInterval: NodeJS.Timeout | null = null;
+    private readonly POLLING_RATE = 500; // 2 times per second (500ms)
 
     constructor() {
         this.players = new Map<string, Player>();
+        this.lastKnownPositions = new Map<string, { x: number; z: number }>();
         console.log('Game initialized.');
+        this.startUpdateLoop();
     }
 
     /**
-     * Adds a new player to the game.
+     * Generates a random coordinate value between -100 and 100
+     */
+    private generateRandomCoordinate(): number {
+        return Math.floor(Math.random() * 201) - 100; // Range: -100 to 100
+    }
+
+    /**
+     * Starts the game update loop at 2 times per second
+     */
+    private startUpdateLoop(): void {
+        this.updateInterval = setInterval(() => {
+            this.update();
+        }, this.POLLING_RATE);
+    }
+
+    /**
+     * Stops the game update loop
+     */
+    public stopUpdateLoop(): void {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+
+    /**
+     * Adds a new player to the game with random X and Z coordinates.
      * @param {string} playerId - The unique ID of the player to add.
-     * @param {number} initialX - The starting X position for the new player.
+     * @param {number} initialX - The starting X position for the new player (optional, will use random if not provided).
+     * @param {number} initialZ - The starting Z position for the new player (optional, will use random if not provided).
      * @returns {PlayerState} The state of the newly added player.
      */
-    public addPlayer(playerId: string, initialX: number = 0): PlayerState {
+    public addPlayer(playerId: string, initialX?: number, initialZ?: number): PlayerState {
         if (this.players.has(playerId)) {
             console.warn(`Player with ID ${playerId} already exists.`);
             return this.players.get(playerId)!.getState();
         }
-        const player = new Player(playerId, initialX, this.fixedY);
+        
+        const x = initialX ?? this.generateRandomCoordinate();
+        const z = initialZ ?? this.generateRandomCoordinate();
+        
+        const player = new Player(playerId, x, 0, z); // Y remains 0 (ground level)
         this.players.set(playerId, player);
-        console.log(`Player ${playerId} added at (${initialX}, ${this.fixedY}).`);
+        this.lastKnownPositions.set(playerId, { x, z });
+        console.log(`Player ${playerId} added at (${x}, 0, ${z}).`);
         return player.getState();
     }
 
@@ -38,6 +74,7 @@ export class Game {
      */
     public removePlayer(playerId: string): boolean {
         if (this.players.delete(playerId)) {
+            this.lastKnownPositions.delete(playerId);
             console.log(`Player ${playerId} removed.`);
             return true;
         }
@@ -46,17 +83,19 @@ export class Game {
     }
 
     /**
-     * Updates a player's X position. Y position remains fixed.
+     * Updates a player's X and Z position. Y position remains fixed at 0.
      * @param {string} playerId - The ID of the player to update.
      * @param {number} newX - The new X coordinate for the player.
+     * @param {number} newZ - The new Z coordinate for the player.
      * @returns {PlayerState | null} The updated player state, or null if the player does not exist.
      */
-    public updatePlayerPosition(playerId: string, newX: number): PlayerState | null {
+    public updatePlayerPosition(playerId: string, newX: number, newZ: number): PlayerState | null {
         const player = this.players.get(playerId);
         if (player) {
             player.x = newX;
-            // Y is fixed, so no need to update player.y
-            // console.log(`Player ${playerId} moved to X: ${newX}.`);
+            player.z = newZ;
+            // Y remains fixed at 0
+            // console.log(`Player ${playerId} moved to (${newX}, 0, ${newZ}).`);
             return player.getState();
         }
         console.warn(`Attempted to move non-existent player ${playerId}.`);
@@ -81,14 +120,46 @@ export class Game {
     }
 
     /**
-     * Placeholder for future game logic updates (e.g., physics, interactions).
+     * Gets only the players whose positions have changed since last update.
+     * @returns {PlayerState[]} An array of player states that have moved.
+     */
+    public getUpdatedPlayerStates(): PlayerState[] {
+        const updatedPlayers: PlayerState[] = [];
+        
+        for (const [playerId, player] of this.players) {
+            const currentX = player.x;
+            const currentZ = player.z;
+            const lastKnownPosition = this.lastKnownPositions.get(playerId);
+            
+            if (!lastKnownPosition || 
+                currentX !== lastKnownPosition.x || 
+                currentZ !== lastKnownPosition.z) {
+                updatedPlayers.push(player.getState());
+                this.lastKnownPositions.set(playerId, { x: currentX, z: currentZ });
+            }
+        }
+        
+        return updatedPlayers;
+    }
+
+    /**
+     * Game logic updates called at 2 times per second.
      * This method would be called periodically by the game loop.
      */
     public update(): void {
-        // Implement game logic here, e.g.,
+        // Get players with position changes
+        const updatedPlayers = this.getUpdatedPlayerStates();
+        
+        if (updatedPlayers.length > 0) {
+            // Here you would typically broadcast the updates to connected clients
+            // For now, we'll just log the updates
+            console.log(`Broadcasting updates for ${updatedPlayers.length} players:`, 
+                updatedPlayers.map(p => `${p.id}: (${p.x}, ${p.y}, ${p.z})`));
+        }
+        
+        // Implement additional game logic here, e.g.,
         // - Collision detection
         // - Environmental interactions
         // - AI updates
-        // For now, it just ensures player positions are consistent.
     }
 }

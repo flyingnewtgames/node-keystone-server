@@ -6,7 +6,7 @@ import { Game } from './game';
 import { PlayerState } from './player';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
-const GAME_TICK_RATE = 1000 / 60; // 60 updates per second
+const GAME_TICK_RATE = 1000 / 2; // 2 updates per second
 
 interface CustomWebSocket extends WebSocket {
     id: string; // Add a unique ID to each WebSocket connection
@@ -66,8 +66,8 @@ wss.on('connection', ws => {
                 case 'move':
                     const moveMsg = decodedMessage;
                     // Validate playerId (ensure client can only move their own player)
-                    if (moveMsg.type === 'move' && moveMsg.x !== undefined) {
-                        game.updatePlayerPosition(playerId, moveMsg.x);
+                    if (moveMsg.type === 'move' && moveMsg.x !== undefined && moveMsg.z !== undefined) {
+                        game.updatePlayerPosition(playerId, moveMsg.x, moveMsg.z);
                         // The game loop will broadcast the state,
                         // so no need to broadcast immediately here for every move.
                     }
