@@ -42,7 +42,7 @@ wss.on('connection', ws => {
     console.log(`Client connected: ${playerId}`);
 
     // Add player to the game state
-    const initialPlayerState = game.addPlayer(playerId, Math.random() * 50); // Random initial X
+    const initialPlayerState = game.addPlayer(playerId, Math.random() * 50, 1, 0); // Random initial X, default Z and rotation
 
     // Notify the new client of their ID and the initial game state
     ws.send(encodeServerMessage({ type: 'connected', playerId } as PlayerConnectedMessage));
@@ -66,8 +66,8 @@ wss.on('connection', ws => {
                 case 'move':
                     const moveMsg = decodedMessage;
                     // Validate playerId (ensure client can only move their own player)
-                    if (moveMsg.type === 'move' && moveMsg.x !== undefined && moveMsg.z !== undefined) {
-                        game.updatePlayerPosition(playerId, moveMsg.x, moveMsg.z);
+                    if (moveMsg.type === 'move' && moveMsg.x !== undefined && moveMsg.z !== undefined && moveMsg.rot !== undefined) {
+                        game.updatePlayerPosition(playerId, moveMsg.x, moveMsg.z, moveMsg.rot);
                         // The game loop will broadcast the state,
                         // so no need to broadcast immediately here for every move.
                     }

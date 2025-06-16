@@ -7,13 +7,13 @@ import { Player, PlayerState } from './player';
  */
 export class Game {
     private players: Map<string, Player>; // Maps player ID to Player instance
-    private lastKnownPositions: Map<string, { x: number; z: number }>; // Track last sent X and Z positions
+    private lastKnownPositions: Map<string, { x: number; z: number; rot: number }>; // Track last sent X, Z positions and rotation
     private updateInterval: NodeJS.Timeout | null = null;
     private readonly POLLING_RATE = 500; // 2 times per second (500ms)
 
     constructor() {
         this.players = new Map<string, Player>();
-        this.lastKnownPositions = new Map<string, { x: number; z: number }>();
+        this.lastKnownPositions = new Map<string, { x: number; z: number; rot: number }>();
         console.log('Game initialized.');
         this.startUpdateLoop();
     }
@@ -49,9 +49,10 @@ export class Game {
      * @param {string} playerId - The unique ID of the player to add.
      * @param {number} initialX - The starting X position for the new player (optional, will use random if not provided).
      * @param {number} initialZ - The starting Z position for the new player (optional, will use random if not provided).
+     * @param {number} initialRot - The starting rotation for the new player (optional, will use 0 if not provided).
      * @returns {PlayerState} The state of the newly added player.
      */
-    public addPlayer(playerId: string, initialX?: number, initialZ?: number): PlayerState {
+    public addPlayer(playerId: string, initialX?: number, initialZ?: number, initialRot?: number): PlayerState {
         if (this.players.has(playerId)) {
             console.warn(`Player with ID ${playerId} already exists.`);
             return this.players.get(playerId)!.getState();
@@ -59,11 +60,12 @@ export class Game {
         
         const x = initialX ?? this.generateRandomCoordinate();
         const z = initialZ ?? this.generateRandomCoordinate();
+        const rot = initialRot ?? 0;
         
-        const player = new Player(playerId, x, 1, z); // Y remains 1 (ground level)
+        const player = new Player(playerId, x, 1, z, rot); // Y remains 1 (ground level)
         this.players.set(playerId, player);
-        this.lastKnownPositions.set(playerId, { x, z });
-        console.log(`Player ${playerId} added at (${x}, 1, ${z}).`);
+        this.lastKnownPositions.set(playerId, { x, z, rot });
+        console.log(`Player ${playerId} added at (${x}, 1, ${z}) with rotation ${rot}.`);
         return player.getState();
     }
 
@@ -83,19 +85,43 @@ export class Game {
     }
 
     /**
-     * Updates a player's X and Z position. Y position remains fixed at 1.
+     * Updates a player's X, Z position and rotation. Y position remains fixed at 1.
      * @param {string} playerId - The ID of the player to update.
      * @param {number} newX - The new X coordinate for the player.
      * @param {number} newZ - The new Z coordinate for the player.
+     * @param {number} newRot - The new rotation for the player (optional).
      * @returns {PlayerState | null} The updated player state, or null if the player does not exist.
      */
-    public updatePlayerPosition(playerId: string, newX: number, newZ: number): PlayerState | null {
+    public updatePlayerPosition(playerId: string, newX: number, newZ: number, newRot?: number): PlayerState | null {
         const player = this.players.get(playerId);
         if (player) {
             player.x = newX;
             player.z = newZ;
+            player.rot = newRot ?? player.rot;
             // Y remains fixed at 1
-            // console.log(`Player ${playerId} moved to (${newX}, 1, ${newZ}).`);
+            // console.log(`Player ${playerId} moved to (${newX}, 1, ${newZ}) with rotation ${player.rot}.`);
+            return player.getState();
+        }
+        console.warn(`Attempted to move non-existent player ${playerId}.`);
+        return null;
+    }
+
+    /**
+     * Updates a player's position and rotation.
+     * @param {string} playerId - The ID of the player to update.
+     * @param {number} newX - The new X coordinate for the player.
+     * @param {number} newZ - The new Z coordinate for the player.
+     * @param {number} newRot - The new rotation for the player.
+     * @returns {PlayerState | null} The updated player state, or null if the player does not exist.
+     */
+    public updatePlayerPositionAndRotation(playerId: string, newX: number, newZ: number, newRot: number): PlayerState | null {
+        const player = this.players.get(playerId);
+        if (player) {
+            player.x = newX;
+            player.z = newZ;
+            player.rot = newRot;
+            // Y remains fixed at 1
+            // console.log(`Player ${playerId} moved to (${newX}, 1, ${newZ}) with rotation ${newRot}.`);
             return player.getState();
         }
         console.warn(`Attempted to move non-existent player ${playerId}.`);
@@ -120,8 +146,8 @@ export class Game {
     }
 
     /**
-     * Gets only the players whose positions have changed since last update.
-     * @returns {PlayerState[]} An array of player states that have moved.
+     * Gets only the players whose positions or rotation have changed since last update.
+     * @returns {PlayerState[]} An array of player states that have moved or rotated.
      */
     public getUpdatedPlayerStates(): PlayerState[] {
         const updatedPlayers: PlayerState[] = [];
@@ -129,13 +155,15 @@ export class Game {
         for (const [playerId, player] of this.players) {
             const currentX = player.x;
             const currentZ = player.z;
+            const currentRot = player.rot;
             const lastKnownPosition = this.lastKnownPositions.get(playerId);
             
             if (!lastKnownPosition || 
                 currentX !== lastKnownPosition.x || 
-                currentZ !== lastKnownPosition.z) {
+                currentZ !== lastKnownPosition.z ||
+                currentRot !== lastKnownPosition.rot) {
                 updatedPlayers.push(player.getState());
-                this.lastKnownPositions.set(playerId, { x: currentX, z: currentZ });
+                this.lastKnownPositions.set(playerId, { x: currentX, z: currentZ, rot: currentRot });
             }
         }
         
@@ -155,7 +183,7 @@ export class Game {
             // Here you would typically broadcast the updates to connected clients
             // For now, we'll just log the updates
             /* console.log(`Broadcasting updates for ${updatedPlayers.length} players:`, 
-                updatedPlayers.map(p => `${p.id}: (${p.x}, ${p.y}, ${p.z})`)); */
+                updatedPlayers.map(p => `${p.id}: (${p.x}, ${p.y}, ${p.z}) rot: ${p.rot}`)); */
         }
         // No output when no players have moved
         

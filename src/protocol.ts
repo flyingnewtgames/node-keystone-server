@@ -56,6 +56,7 @@ export interface MoveMessage {
     type: 'move';
     x: number;
     z: number;
+    rot: number;
     t: number; // wraparound timecode
 }
 
