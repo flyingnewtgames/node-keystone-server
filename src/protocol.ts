@@ -60,7 +60,13 @@ export interface MoveMessage {
     t: number; // wraparound timecode
 }
 
-export type ClientMessage = MoveMessage;
+export interface SetNameMessage {
+    type: 'set_name';
+    name: string;
+    t: number; // wraparound timecode
+}
+
+export type ClientMessage = MoveMessage | SetNameMessage;
 
 export interface StateUpdateMessage {
     type: 'state';
@@ -80,7 +86,18 @@ export interface PlayerDisconnectedMessage {
     t: number; // wraparound timecode
 }
 
-export type ServerMessage = StateUpdateMessage | PlayerConnectedMessage | PlayerDisconnectedMessage;
+export interface NameAcceptedMessage {
+    type: 'name_accepted';
+    t: number; // wraparound timecode
+}
+
+export interface NameRejectedMessage {
+    type: 'name_rejected';
+    reason: string;
+    t: number; // wraparound timecode
+}
+
+export type ServerMessage = StateUpdateMessage | PlayerConnectedMessage | PlayerDisconnectedMessage | NameAcceptedMessage | NameRejectedMessage;
 
 export function encodeServerMessage(message: ServerMessage): Uint8Array | string {
     const messageWithTimecode = {

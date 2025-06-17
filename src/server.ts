@@ -1,7 +1,7 @@
 // Main WebSocket server implementation, handling connections, messages, and game state.
 import { WebSocket, WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique player IDs
-import { encodeServerMessage, decodeClientMessage, ClientMessage, ServerMessage, PlayerConnectedMessage, PlayerDisconnectedMessage, StateUpdateMessage } from './protocol';
+import { encodeServerMessage, decodeClientMessage, ClientMessage, ServerMessage, PlayerConnectedMessage, PlayerDisconnectedMessage, StateUpdateMessage, NameAcceptedMessage, NameRejectedMessage } from './protocol';
 import { Game } from './game';
 import { PlayerState } from './player';
 
@@ -107,6 +107,28 @@ wss.on('connection', ws => {
                         game.updatePlayerPosition(playerId, moveMsg.x, moveMsg.z, moveMsg.rot);
                         // The game loop will broadcast the state,
                         // so no need to broadcast immediately here for every move.
+                    }
+                    break;
+                case 'set_name':
+                    const setNameMsg = decodedMessage;
+                    if (setNameMsg.name && typeof setNameMsg.name === 'string') {
+                        const nameSet = game.setPlayerName(playerId, setNameMsg.name);
+                        if (nameSet) {
+                            sendToPlayer(playerId, { type: 'name_accepted' } as NameAcceptedMessage);
+                            console.log(`Player ${playerId} successfully set name to "${setNameMsg.name}"`);
+                        } else {
+                            sendToPlayer(playerId, { 
+                                type: 'name_rejected', 
+                                reason: 'Name already taken' 
+                            } as NameRejectedMessage);
+                            console.log(`Player ${playerId} failed to set name "${setNameMsg.name}" - already taken`);
+                        }
+                    } else {
+                        sendToPlayer(playerId, { 
+                            type: 'name_rejected', 
+                            reason: 'Invalid name format' 
+                        } as NameRejectedMessage);
+                        console.log(`Player ${playerId} sent invalid name format`);
                     }
                     break;
                 default:

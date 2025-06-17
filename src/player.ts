@@ -3,6 +3,7 @@
 /**
  * Represents the essential state of a player in the game.
  * @property {string} id - Unique identifier for the player (e.g., WebSocket ID).
+ * @property {string} name - The player's display name (optional, null if not set).
  * @property {number} x - The player's current X coordinate.
  * @property {number} y - The player's current Y coordinate (fixed as vertical movement is disallowed).
  * @property {number} z - The player's current Z coordinate.
@@ -10,6 +11,7 @@
  */
 export interface PlayerState {
     id: string;
+    name: string | null;
     x: number;
     y: number; // Y is fixed as per requirement (no vertical movement)
     z: number;
@@ -21,6 +23,7 @@ export interface PlayerState {
  */
 export class Player {
     private _id: string;
+    private _name: string | null;
     private _x: number;
     private _y: number; // Fixed Y-coordinate
     private _z: number;
@@ -36,6 +39,7 @@ export class Player {
      */
     constructor(id: string, initialX: number = 1, initialY: number = 1, initialZ: number = 1, initialRot: number = 0) {
         this._id = id;
+        this._name = null; // Name starts as null until set by client
         this._x = initialX;
         this._y = initialY; // Y is fixed and won't change
         this._z = initialZ;
@@ -48,6 +52,22 @@ export class Player {
      */
     public get id(): string {
         return this._id;
+    }
+
+    /**
+     * Gets the player's name.
+     * @returns {string | null} The player's name, or null if not set.
+     */
+    public get name(): string | null {
+        return this._name;
+    }
+
+    /**
+     * Sets the player's name.
+     * @param {string | null} newName - The new name for the player.
+     */
+    public set name(newName: string | null) {
+        this._name = newName;
     }
 
     /**
@@ -114,6 +134,7 @@ export class Player {
     public getState(): PlayerState {
         return {
             id: this.id,
+            name: this.name,
             x: this.x,
             y: this.y,
             z: this.z,

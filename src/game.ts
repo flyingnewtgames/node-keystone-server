@@ -7,12 +7,14 @@ import { Player, PlayerState } from './player';
  */
 export class Game {
     private players: Map<string, Player>; // Maps player ID to Player instance
+    private playerNames: Set<string>; // Track taken names for uniqueness
     private lastKnownPositions: Map<string, { x: number; z: number; rot: number }>; // Track last sent X, Z positions and rotation
     private updateInterval: NodeJS.Timeout | null = null;
     private readonly POLLING_RATE = 500; // 2 times per second (500ms)
 
     constructor() {
         this.players = new Map<string, Player>();
+        this.playerNames = new Set<string>();
         this.lastKnownPositions = new Map<string, { x: number; z: number; rot: number }>();
         console.log('Game initialized.');
         this.startUpdateLoop();
@@ -42,6 +44,45 @@ export class Game {
             clearInterval(this.updateInterval);
             this.updateInterval = null;
         }
+    }
+
+    /**
+     * Checks if a name is available (not taken by another player).
+     * @param {string} name - The name to check.
+     * @returns {boolean} True if the name is available, false if taken.
+     */
+    public isNameAvailable(name: string): boolean {
+        return !this.playerNames.has(name);
+    }
+
+    /**
+     * Sets a player's name if it's available.
+     * @param {string} playerId - The ID of the player.
+     * @param {string} name - The desired name.
+     * @returns {boolean} True if the name was set successfully, false if taken or player doesn't exist.
+     */
+    public setPlayerName(playerId: string, name: string): boolean {
+        const player = this.players.get(playerId);
+        if (!player) {
+            console.warn(`Attempted to set name for non-existent player ${playerId}.`);
+            return false;
+        }
+
+        // Check if name is already taken
+        if (this.playerNames.has(name)) {
+            return false;
+        }
+
+        // Remove old name if player had one
+        if (player.name) {
+            this.playerNames.delete(player.name);
+        }
+
+        // Set new name
+        player.name = name;
+        this.playerNames.add(name);
+        console.log(`Player ${playerId} set name to "${name}".`);
+        return true;
     }
 
     /**
@@ -75,7 +116,13 @@ export class Game {
      * @returns {boolean} True if the player was successfully removed, false otherwise.
      */
     public removePlayer(playerId: string): boolean {
-        if (this.players.delete(playerId)) {
+        const player = this.players.get(playerId);
+        if (player) {
+            // Remove player's name from the taken names set
+            if (player.name) {
+                this.playerNames.delete(player.name);
+            }
+            this.players.delete(playerId);
             this.lastKnownPositions.delete(playerId);
             console.log(`Player ${playerId} removed.`);
             return true;
